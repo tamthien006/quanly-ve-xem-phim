@@ -16,6 +16,105 @@ const {
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management and authentication
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - password
+ *         - role
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: The auto-generated id of the user
+ *         name:
+ *           type: string
+ *           description: The user's full name
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: The user's email address (must be unique)
+ *         password:
+ *           type: string
+ *           format: password
+ *           minLength: 6
+ *           description: The user's password (min 6 characters)
+ *         role:
+ *           type: string
+ *           enum: [user, staff, admin]
+ *           default: user
+ *           description: The user's role
+ *         phone:
+ *           type: string
+ *           description: The user's phone number
+ *         avatar:
+ *           type: string
+ *           description: URL to the user's avatar image
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the user was created
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the user was last updated
+ *       example:
+ *         id: 60d0fe4f5311236168a109ca
+ *         name: John Doe
+ *         email: john@example.com
+ *         role: user
+ *         phone: "+1234567890"
+ *         avatar: https://example.com/avatar.jpg
+ *         createdAt: 2023-07-24T10:30:00.000Z
+ *         updatedAt: 2023-07-24T10:30:00.000Z
+ * 
+ *     LoginCredentials:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: user@example.com
+ *         password:
+ *           type: string
+ *           format: password
+ *           example: password123
+ * 
+ *     TokenResponse:
+ *       type: object
+ *       properties:
+ *         token:
+ *           type: string
+ *           description: JWT token for authentication
+ *         user:
+ *           $ref: '#/components/schemas/User'
+ * 
+ *     ErrorResponse:
+ *       type: object
+ *       properties:
+ *         status:
+ *           type: string
+ *           example: error
+ *         message:
+ *           type: string
+ *           example: Error message describing what went wrong
+ */
+
+
 // @route   POST /api/users/register
 // @desc    Register a new user
 // @access  Public
