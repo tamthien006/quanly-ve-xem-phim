@@ -1,51 +1,129 @@
 const Movie = require('../models/Movie');
+const Showtime = require('../models/Showtime');
+const Theater = require('../models/Theater');
+const Booking = require('../models/Booking');
 const { validationResult } = require('express-validator');
 
-// @desc    Get all movies
+// @desc    Search movies by title, director, or cast
+// @route   GET /api/movies/search
+// @access  Public
+exports.searchMovies = async (req, res, next) => {
+  try {
+    const { q, page = 1, limit = 10 } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required'
+      });
+    }
+
+    const query = {
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { director: { $regex: q, $options: 'i' } },
+        { cast: { $in: [new RegExp(q, 'i')] } },
+        { genres: { $in: [new RegExp(q, 'i')] } }
+      ]
+    };
+
+    const [movies, count] = await Promise.all([
+      Movie.find(query)
+        .sort({ releaseDate: -1, title: 1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .select('title posterUrl releaseDate duration genres rating')
+        .lean(),
+      Movie.countDocuments(query)
+    ]);
+
+    const totalPages = Math.ceil(count / limit);
+    const hasMore = page < totalPages;
+
+    res.status(200).json({
+      success: true,
+      count: movies.length,
+      total: count,
+      totalPages,
+      currentPage: parseInt(page),
+      hasMore,
+      data: movies
+    });
+  } catch (err) {
+    console.error('Search error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during search'
+    });
+  }
+};
+
+// @desc    Get all movies with filtering and pagination
 // @route   GET /api/movies
 // @access  Public
 exports.getMovies = async (req, res, next) => {
   try {
-    const { status, search, page = 1, limit = 10 } = req.query;
+    const { 
+      status, 
+      genre, 
+      rating, 
+      page = 1, 
+      limit = 10,
+      sortBy = 'releaseDate',
+      sortOrder = 'desc'
+    } = req.query;
     
     // Build query object
     const query = {};
     
     // Filter by status if provided
-    if (status && ['showing', 'coming'].includes(status)) {
-      query.status = status;
+    if (status && ['showing', 'upcoming', 'ended'].includes(status)) {
+      const now = new Date();
+      if (status === 'showing') {
+        query.releaseDate = { $lte: now };
+        query.endDate = { $gte: now };
+      } else if (status === 'upcoming') {
+        query.releaseDate = { $gt: now };
+      } else if (status === 'ended') {
+        query.endDate = { $lt: now };
+      }
     }
     
-    // Search by title if search term is provided
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { 'cast': { $regex: search, $options: 'i' } },
-        { 'director': { $regex: search, $options: 'i' } },
-        { 'genre': { $regex: search, $options: 'i' } }
-      ];
+    // Filter by genre if provided
+    if (genre) {
+      query.genres = { $in: [new RegExp(genre, 'i')] };
     }
+    
+    // Filter by minimum rating if provided
+    if (rating) {
+      query.rating = { $gte: parseFloat(rating) };
+    }
+    
+    // Build sort object
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
     // Execute query with pagination
-    const movies = await Movie.find(query)
-      .sort({ releaseDate: -1, title: 1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .exec();
+    const [movies, count] = await Promise.all([
+      Movie.find(query)
+        .sort(sort)
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .select('-__v')
+        .lean(),
+      Movie.countDocuments(query)
+    ]);
     
-    // Get total count for pagination
-    const count = await Movie.countDocuments(query);
-    
-    // Calculate next page for pagination
-    const nextPage = (page * limit) < count ? parseInt(page) + 1 : null;
+    const totalPages = Math.ceil(count / limit);
+    const hasMore = page < totalPages;
     
     res.status(200).json({
       success: true,
       count: movies.length,
       total: count,
-      totalPages: Math.ceil(count / limit),
+      totalPages,
       currentPage: parseInt(page),
-      nextPage,
+      hasMore,
       data: movies
     });
   } catch (err) {

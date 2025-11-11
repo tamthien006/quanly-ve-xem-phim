@@ -4,21 +4,23 @@ const movieSchema = new mongoose.Schema(
   {
     title: { 
       type: String, 
-      required: true, 
+      required: [true, 'Please add a title'],
       trim: true,
       index: true 
     },
-    genre: [{
+    genres: [{
       type: String,
-      trim: true
+      trim: true,
+      required: [true, 'Please add at least one genre']
     }],
     duration: {
       type: Number, // in minutes
-      required: true
+      required: [true, 'Please add duration in minutes'],
+      min: [1, 'Duration must be at least 1 minute']
     },
     description: {
       type: String,
-      required: true
+      required: [true, 'Please add a description']
     },
     cast: [{
       type: String,
@@ -26,35 +28,56 @@ const movieSchema = new mongoose.Schema(
     }],
     director: {
       type: String,
+      required: [true, 'Please add a director'],
       trim: true
     },
-    trailer: {
+    trailerUrl: {
       type: String,
       match: [/^https?:\/\//, 'Please use a valid URL with HTTP or HTTPS']
     },
-    poster: {
+    posterUrl: {
       type: String,
       default: 'default-movie.jpg'
     },
     status: { 
       type: String, 
-      enum: ['showing', 'coming'], 
-      default: 'showing',
+      enum: ['showing', 'upcoming', 'ended'], 
+      default: 'upcoming',
       index: true 
     },
     releaseDate: {
       type: Date,
-      required: true
+      required: [true, 'Please add release date']
+    },
+    endDate: {
+      type: Date,
+      required: [true, 'Please add end date']
     },
     rating: {
       type: Number,
       min: 0,
       max: 10,
-      default: 0
+      default: 0,
+      set: val => Math.round(val * 10) / 10
     },
     numReviews: {
       type: Number,
       default: 0
+    },
+    ageRating: {
+      type: String,
+      enum: ['P', 'C13', 'C16', 'C18', 'K', 'T16+'],
+      default: 'P',
+      required: true
+    },
+    language: {
+      type: String,
+      default: 'Vietnamese',
+      trim: true
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false
     }
   },
   { 
@@ -68,9 +91,46 @@ const movieSchema = new mongoose.Schema(
 movieSchema.virtual('reviews', {
   ref: 'Review',
   localField: '_id',
-  foreignField: 'movieId',
+  foreignField: 'movie',
   justOne: false
 });
+
+// Virtual for showtimes
+movieSchema.virtual('showtimes', {
+  ref: 'Showtime',
+  localField: '_id',
+  foreignField: 'movie',
+  justOne: false
+});
+
+// Indexes for better query performance
+movieSchema.index({ title: 'text', director: 'text', cast: 'text' });
+movieSchema.index({ releaseDate: 1 });
+movieSchema.index({ endDate: 1 });
+movieSchema.index({ status: 1 });
+movieSchema.index({ rating: -1 });
+
+// Add method to check if movie is showing now
+movieSchema.methods.isShowing = function() {
+  const now = new Date();
+  return this.releaseDate <= now && this.endDate >= now;
+};
+
+// Add method to get upcoming showtimes
+movieSchema.methods.getUpcomingShowtimes = async function(days = 7) {
+  const start = new Date();
+  const end = new Date();
+  end.setDate(start.getDate() + days);
+  
+  return await mongoose.model('Showtime').find({
+    movie: this._id,
+    startTime: { $gte: start, $lte: end },
+    isActive: true
+  })
+  .populate('theater', 'name address')
+  .populate('room', 'name')
+  .sort('startTime');
+};
 
 // Calculate average rating
 movieSchema.statics.getAverageRating = async function(movieId) {
