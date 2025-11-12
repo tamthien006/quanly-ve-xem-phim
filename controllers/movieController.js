@@ -80,11 +80,14 @@ exports.getMovies = async (req, res, next) => {
     if (status && ['showing', 'upcoming', 'ended'].includes(status)) {
       const now = new Date();
       if (status === 'showing') {
+        query.status = 'showing';
         query.releaseDate = { $lte: now };
         query.endDate = { $gte: now };
       } else if (status === 'upcoming') {
+        query.status = 'upcoming';
         query.releaseDate = { $gt: now };
       } else if (status === 'ended') {
+        query.status = 'ended';
         query.endDate = { $lt: now };
       }
     }
@@ -348,10 +351,15 @@ exports.deleteMovie = async (req, res, next) => {
 // @access  Public
 exports.getFeaturedMovies = async (req, res, next) => {
   try {
-    const movies = await Movie.find({ status: 'showing' })
-      .sort({ releaseDate: -1, rating: -1 })
-      .limit(5);
-    
+    const movies = await Movie.find({ 
+      isFeatured: true, 
+      status: 'showing',
+      releaseDate: { $lte: new Date() },
+      endDate: { $gte: new Date() }
+    })
+    .sort({ releaseDate: -1, rating: -1 })
+    .limit(5);
+      
     res.status(200).json({
       success: true,
       count: movies.length,
@@ -372,7 +380,7 @@ exports.getFeaturedMovies = async (req, res, next) => {
 exports.getUpcomingMovies = async (req, res, next) => {
   try {
     const movies = await Movie.find({ 
-      status: 'coming',
+      status: 'upcoming',
       releaseDate: { $gte: new Date() }
     })
     .sort({ releaseDate: 1 })

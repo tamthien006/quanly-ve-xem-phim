@@ -24,6 +24,9 @@ connectDB();
 // Initialize Express app
 const app = express();
 
+// Trust proxy for rate limiting behind reverse proxy (like Nginx, Heroku, etc.)
+app.set('trust proxy', 1);
+
 // Set security HTTP headers
 app.use(helmet());
 
@@ -78,19 +81,17 @@ app.use((req, res, next) => {
 });
 
 // API Routes
-app.use('/api/v1/users', require('./routes/userRoutes'));
+app.use('/api/v1/auth', require('./routes/userRoutes'));
 app.use('/api/v1/movies', require('./routes/movieRoutes'));
-
-// Other routes will be added as they are implemented
-// app.use('/api/v1/cinemas', require('./routes/cinemaRoutes'));
-// app.use('/api/v1/rooms', require('./routes/roomRoutes'));
-// app.use('/api/v1/schedules', require('./routes/scheduleRoutes'));
-// app.use('/api/v1/tickets', require('./routes/ticketRoutes'));
-// app.use('/api/v1/payments', require('./routes/paymentRoutes'));
-// app.use('/api/v1/promotions', require('./routes/promotionRoutes'));
-// app.use('/api/v1/combos', require('./routes/comboRoutes'));
-// app.use('/api/v1/reviews', require('./routes/reviewRoutes'));
-// app.use('/api/v1/dashboard', require('./routes/dashboardRoutes'));
+app.use('/api/v1/cinemas', require('./routes/cinemaRoutes'));
+app.use('/api/v1/rooms', require('./routes/roomRoutes'));
+app.use('/api/v1/schedules', require('./routes/scheduleRoutes'));
+app.use('/api/v1/tickets', require('./routes/ticketRoutes'));
+app.use('/api/v1/payments', require('./routes/paymentRoutes'));
+app.use('/api/v1/promotions', require('./routes/promotionRoutes'));
+app.use('/api/v1/combos', require('./routes/comboRoutes'));
+app.use('/api/v1/reviews', require('./routes/reviewRoutes'));
+app.use('/api/v1/dashboard', require('./routes/dashboardRoutes'));
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {

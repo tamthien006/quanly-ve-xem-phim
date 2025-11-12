@@ -239,37 +239,9 @@ ticketSchema.index(
   }
 );
 
-// Virtual for payment
-ticketSchema.virtual('payment', {
-  ref: 'Payment',
-  localField: '_id',
-  foreignField: 'ticketId',
-  justOne: true
-});
-
-// Virtual for schedule
-ticketSchema.virtual('schedule', {
-  ref: 'Schedule',
-  localField: 'scheduleId',
-  foreignField: '_id',
-  justOne: true
-});
-
-// Virtual for user
-ticketSchema.virtual('user', {
-  ref: 'User',
-  localField: 'userId',
-  foreignField: '_id',
-  justOne: true
-});
-
-// Virtual for room
-ticketSchema.virtual('room', {
-  ref: 'Room',
-  localField: 'roomId',
-  foreignField: '_id',
-  justOne: true
-});
+// All virtual fields have been removed to prevent conflicts with existing schema fields
+// Use populate() in controllers instead, for example:
+// Ticket.find().populate('user').populate('movie').populate('theater').populate('room')
 
 // Calculate ticket totals before saving
 ticketSchema.pre('save', async function(next) {

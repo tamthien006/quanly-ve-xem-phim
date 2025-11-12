@@ -175,4 +175,4 @@ movieSchema.post('save', function() {
   this.constructor.getAverageRating(this._id);
 });
 
-module.exports = mongoose.model('Movie', movieSchema);
+module.exports = mongoose.model('movies', movieSchema);

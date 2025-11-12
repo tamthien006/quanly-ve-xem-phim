@@ -120,17 +120,32 @@ exports.getNowShowingMovies = async (req, res, next) => {
   try {
     const { city, date = new Date() } = req.query;
     
-    // Find all showtimes after the current time
+    // Parse the date if it's a string
+    const queryDate = typeof date === 'string' ? new Date(date) : date;
+    
+    if (isNaN(queryDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Please use ISO 8601 format (e.g., 2025-11-12T00:00:00.000Z)'
+      });
+    }
+    
+    // Calculate end date (7 days from query date)
+    const endDate = new Date(queryDate);
+    endDate.setDate(queryDate.getDate() + 7);
+    
+    // Find all showtimes within the date range
     const showtimes = await Showtime.find({
       startTime: { 
-        $gte: new Date(date),
-        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 7)) // Next 7 days
-      }
+        $gte: queryDate,
+        $lt: endDate
+      },
+      isActive: true
     })
     .populate({
       path: 'movie',
       match: { status: 'showing' },
-      select: 'title posterUrl duration ageRating genres'
+      select: 'title posterUrl duration ageRating genres status'
     })
     .populate({
       path: 'theater',
